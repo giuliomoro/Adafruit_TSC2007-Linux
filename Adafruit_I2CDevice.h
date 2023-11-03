@@ -8,7 +8,11 @@ class Adafruit_I2CDevice : I2c
 public:
 	Adafruit_I2CDevice(uint8_t, TwoWire*);
 	~Adafruit_I2CDevice();
-	int begin();
-	int write(uint8_t*, size_t);
-	int read(uint8_t*, size_t);
+	bool begin();
+	bool write(uint8_t*, size_t);
+	bool read(uint8_t*, size_t);
+private:
+	int bus;
+	int addr;
+
 };
