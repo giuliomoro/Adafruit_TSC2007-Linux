@@ -22,7 +22,7 @@ int main()
 		uint16_t x, y, z1, z2;
 		if(touch.read_touch(&x, &y, &z1, &z2)) {
 			oscSender.newMessage("/tsc");
-			oscSender.add(x).add(y).add(z1).add(z2).send();
+			oscSender.add(x).add(y).add(z1).add(z2).sendNonRt();
 		}
 		usleep(sleepMs * 1000);
 	}
