@@ -21,26 +21,24 @@
 */
 
 #include "Wire.h"
-#include "pinDefinitions.h"
 
-arduino::MbedI2C::MbedI2C(int sda, int scl) : _sda(digitalPinToPinName(sda)), _scl(digitalPinToPinName(scl)), usedTxBuffer(0) {}
-
-arduino::MbedI2C::MbedI2C(PinName sda, PinName scl) : _sda(sda), _scl(scl), usedTxBuffer(0) {}
+arduino::MbedI2C::MbedI2C(unsigned int bus) : bus(bus), usedTxBuffer(0) {}
 
 void arduino::MbedI2C::begin() {
 	end();
-	master = new mbed::I2C(_sda, _scl);
+	master = new I2c;
+	master->initI2C_RW(bus, 1, -1);
 }
 
-void arduino::MbedI2C::begin(uint8_t slaveAddr) {
 #ifdef DEVICE_I2CSLAVE
+void arduino::MbedI2C::begin(uint8_t slaveAddr) {
 	end();
 	slave = new mbed::I2CSlave((PinName)_sda, (PinName)_scl);
 	slave->address(slaveAddr << 1);
 	slave_th = new rtos::Thread(osPriorityNormal, 2048, nullptr, "I2CSlave");
 	slave_th->start(mbed::callback(this, &arduino::MbedI2C::receiveThd));
-#endif
 }
+#endif
 
 void arduino::MbedI2C::end() {
 	if (master != NULL) {
@@ -59,9 +57,7 @@ void arduino::MbedI2C::end() {
 }
 
 void arduino::MbedI2C::setClock(uint32_t freq) {
-	if (master != NULL) {
-		master->frequency(freq);
-	}
+	fprintf(stderr, "Unable to set I2C bus frequency (%u Hz requested). The default value will be used\n", freq);
 #ifdef DEVICE_I2CSLAVE
 	if (slave != NULL) {
 		slave->frequency(freq);
@@ -70,7 +66,7 @@ void arduino::MbedI2C::setClock(uint32_t freq) {
 }
 
 void arduino::MbedI2C::beginTransmission(uint8_t address) {
-	_address = address << 1;
+	_address = address;
 	usedTxBuffer = 0;
 }
 
@@ -79,11 +75,11 @@ uint8_t arduino::MbedI2C::endTransmission(bool stopBit) {
 	if (usedTxBuffer == 0) {
 		// we are scanning, return 0 if the addresed device responds with an ACK
 		char buf[1];
-		int ret = master->read(_address, buf, 1, !stopBit);
+		int ret = master->readRaw(_address, (i2c_char_t*)buf, 1, !stopBit);
 		return ret;
 	}
 	#endif
-	if (master->write(_address, (const char *) txBuffer, usedTxBuffer, !stopBit) == 0) return 0;
+	if (master->writeRaw(_address, (i2c_char_t *) txBuffer, usedTxBuffer, !stopBit) == usedTxBuffer) return 0;
 	return 2;
 }
 
@@ -92,8 +88,8 @@ uint8_t arduino::MbedI2C::endTransmission(void) {
 }
 
 size_t arduino::MbedI2C::requestFrom(uint8_t address, size_t len, bool stopBit) {
-	char buf[256];
-	int ret = master->read(address << 1, buf, len, !stopBit);
+	i2c_char_t buf[256];
+	int ret = master->readRaw(address, buf, len, !stopBit) == len ? 0 : -1;
 	if (ret != 0) {
 		return 0;
 	}
@@ -190,11 +186,11 @@ void arduino::MbedI2C::onRequest(voidFuncPtr cb) {
 
 
 #if WIRE_HOWMANY > 0
-arduino::MbedI2C Wire(I2C_SDA, I2C_SCL);
+arduino::MbedI2C Wire0(1);
 #endif
 #if WIRE_HOWMANY > 1
-arduino::MbedI2C Wire1(I2C_SDA1, I2C_SCL1);
+arduino::MbedI2C Wire(1); // I2C1 default for BBB
 #endif
 #if WIRE_HOWMANY > 2
-arduino::MbedI2C Wire2(I2C_SDA2, I2C_SCL2);
+arduino::MbedI2C Wire2(2);
 #endif

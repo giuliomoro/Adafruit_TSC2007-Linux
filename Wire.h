@@ -19,27 +19,38 @@
 #pragma once
 
 #include "Arduino.h"
-#include "api/HardwareI2C.h"
-#include "Print.h"
-#include "drivers/I2C.h"
+#include "Stream.h"
+#include "I2c.h"
+// NOTE: MbedI2C is actually LinuxI2C
+#define WIRE_HOWMANY 3
 #ifdef DEVICE_I2CSLAVE
 #include "drivers/I2CSlave.h"
 #endif
-#include "rtos.h"
 
 typedef void (*voidFuncPtrParamInt)(int);
+typedef void (*voidFuncPtr)();
 
+#include "RingBuffer.h"
 namespace arduino {
 
-class MbedI2C : public HardwareI2C
+#if 0
+template<size_t n>
+class RingBufferN {
+		rxBuffer.store_char(buf[i]);
+	if (rxBuffer.available()) {
+	return rxBuffer.peek();
+				rxBuffer.clear();
+					if (rxBuffer.availableForStore()) {
+						rxBuffer.store_char(uint8_t(buf[buf_idx]));
+		return rxBuffer.read_char();
+};
+#endif
+class MbedI2C : public Stream
 {
   public:
-    MbedI2C(int sda, int scl);
-    MbedI2C(PinName sda, PinName scl);
+    MbedI2C(unsigned int bus);
     virtual void begin();
-    #ifndef DEVICE_I2CSLAVE
-    virtual void __attribute__ ((error("I2C Slave mode is not supported"))) begin(uint8_t address);
-    #else
+    #ifdef DEVICE_I2CSLAVE
     virtual void begin(uint8_t address);
     #endif
     virtual void end();
@@ -70,11 +81,10 @@ class MbedI2C : public HardwareI2C
 private:
 
 #ifdef DEVICE_I2CSLAVE
-    mbed::I2CSlave* slave = NULL;
+    I2CSlave* slave = NULL;
 #endif
-    mbed::I2C*      master = NULL;
-    PinName _sda;
-    PinName _scl;
+    I2c* master = NULL;
+    unsigned int bus;
     int _address;
     RingBufferN<256> rxBuffer;
     uint8_t txBuffer[256];
