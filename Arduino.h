@@ -33,6 +33,7 @@ struct Print {
 	{
 		return true;
 	}
+	int write(uint8_t);
 };
 
 extern Print Serial;
@@ -67,6 +68,7 @@ typedef char __FlashStringHelper;
 void utoa(uint32_t, char*, size_t);
 void noInterrupts();
 void interrupts();
+typedef bool boolean;
 
 #define HEX "#x"
 #define PSTR(a) (a)
